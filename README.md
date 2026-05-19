@@ -16,6 +16,22 @@ Stack: **Tauri 2**, **Rust**, **React 18**, **TypeScript**, **TailwindCSS**, **Z
 - Backup / ripristino JSON cifrato con password dedicata (file `.rdpmanagerbackup`)
 - Tema chiaro/scuro salvato in `settings`
 
+## Repository GitHub
+
+Il progetto è sotto Git (branch `main`). Per pubblicarlo sul tuo account:
+
+1. Accedi a GitHub CLI (una tantum): `gh auth login` (GitHub.com, HTTPS, login nel browser).
+2. Crea il repo e carica il codice:
+   ```powershell
+   cd C:\Users\d.giotta\Desktop\RDPGestione
+   gh repo create helpdesk-manager --private --source=. --remote=origin --push
+   ```
+   Usa `--public` al posto di `--private` se vuoi un repository pubblico.
+
+In alternativa: crea un repo vuoto su [github.com/new](https://github.com/new), poi `git remote add origin https://github.com/TUO_UTENTE/helpdesk-manager.git` e `git push -u origin main`.
+
+Non vengono versionati `node_modules`, build (`dist`, `target`), file `.sqlite` né `.env` (vedi `.gitignore`).
+
 ## Prerequisiti
 
 1. **Node.js** LTS (consigliato 20+): [https://nodejs.org](https://nodejs.org)
