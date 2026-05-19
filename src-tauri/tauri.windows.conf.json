@@ -1,0 +1,19 @@
+{
+  "bundle": {
+    "targets": ["nsis"],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "template": "windows/nsis/installer.nsi",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "installMode": "perMachine",
+        "languages": ["Italian", "English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

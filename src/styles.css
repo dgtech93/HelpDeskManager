@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Tema chiaro: più caldo e meno “bianco su bianco” rispetto a slate-50/white */
+  --surface: 239 243 251;
+  --surface-muted: 228 234 246;
+  --accent: 16 185 129;
+  --accent-hover: 5 150 105;
+}
+
+.dark {
+  --surface: 15 23 42;
+  --surface-muted: 30 41 59;
+  --accent: 52 211 153;
+  --accent-hover: 16 185 129;
+}
+
+body {
+  margin: 0;
+  background-color: rgb(var(--surface-muted));
+}
+
+/* Splash in `index.html`: sfondo scuro finché l’overlay non scompare. */
+html.app-boot body {
+  background-color: #020617 !important;
+}
+
+@layer utilities {
+  /** Scrollbar sottile, tono viola (Firefox + WebKit). */
+  .scrollbar-violet-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139, 92, 246, 0.32) transparent;
+  }
+  .scrollbar-violet-subtle::-webkit-scrollbar {
+    width: 7px;
+  }
+  .scrollbar-violet-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-violet-subtle::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: rgba(139, 92, 246, 0.28);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .scrollbar-violet-subtle::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.42);
+    background-clip: padding-box;
+  }
+  .dark .scrollbar-violet-subtle {
+    scrollbar-color: rgba(167, 139, 250, 0.38) transparent;
+  }
+  .dark .scrollbar-violet-subtle::-webkit-scrollbar-thumb {
+    background: rgba(167, 139, 250, 0.32);
+  }
+  .dark .scrollbar-violet-subtle::-webkit-scrollbar-thumb:hover {
+    background: rgba(192, 181, 255, 0.48);
+  }
+}
+

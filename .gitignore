@@ -1,0 +1,27 @@
+# Dependencies & build
+node_modules/
+dist/
+src-tauri/target/
+
+# Logs & local env
+*.log
+*.local
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Tauri / NSIS build scratch (generated beside template)
+src-tauri/target/release/nsis/
+
+# User / runtime data (never commit)
+*.sqlite
+*.sqlite-*
+
+# Installer output (regenerate with npm run build:installer)
+src-tauri/target/release/bundle/
