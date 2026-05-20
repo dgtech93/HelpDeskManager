@@ -70,11 +70,13 @@ export type VpnFormValues = z.infer<typeof schema>;
 type Props = {
   clients: Client[];
   initial?: VpnConnection | null;
+  /** Se si crea una nuova VPN (senza `initial`), pre-seleziona questo cliente. */
+  defaultClientId?: string | null;
   onSubmit: (v: VpnFormValues & { clearPassword?: boolean }) => Promise<void>;
   onCancel: () => void;
 };
 
-export function VpnForm({ clients, initial, onSubmit, onCancel }: Props) {
+export function VpnForm({ clients, initial, defaultClientId, onSubmit, onCancel }: Props) {
   const pwdSet = Boolean(initial?.passwordEncrypted);
   const [removePwd, setRemovePwd] = React.useState(false);
   const [winProfiles, setWinProfiles] = React.useState<string[]>([]);
@@ -82,10 +84,15 @@ export function VpnForm({ clients, initial, onSubmit, onCancel }: Props) {
   const [winProfilesFetched, setWinProfilesFetched] = React.useState(false);
   const [loadingWin, setLoadingWin] = React.useState(false);
 
+  const preferredNewClientId =
+    (defaultClientId?.trim() && clients.some((c) => c.id === defaultClientId.trim())
+      ? defaultClientId.trim()
+      : undefined) ?? clients[0]?.id ?? "";
+
   const form = useForm<VpnFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      clientId: initial?.clientId ?? clients[0]?.id ?? "",
+      clientId: initial?.clientId ?? preferredNewClientId,
       name: initial?.name ?? "",
       type: initial?.type ?? VPN_TYPES[0],
       server: initial?.server ?? "",
@@ -289,7 +296,10 @@ export function VpnForm({ clients, initial, onSubmit, onCancel }: Props) {
           <div className="md:col-span-2 space-y-1">
             <label className="text-xs font-medium">Percorso file config</label>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Puoi digitare il percorso o sceglierlo con Esplora file.
+              Puoi digitare il percorso o sceglierlo con Esplora file. Su Windows, se indichi un file{" "}
+              <span className="font-mono">.exe</span> (client VPN tipo FortiClient, NetExtender, ecc.), verrà avviato
+              direttamente; per OpenVPN/WireGuard usa il profilo previsto (.ovpn / .conf). Per FortiClient ufficiale
+              conviene comunque il tipo <strong>FortiClient</strong>.
             </p>
             <div className="mt-1 flex flex-wrap gap-2">
               <input

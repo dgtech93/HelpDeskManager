@@ -19,6 +19,7 @@ import { WebForm } from "@/components/WebForm";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AppPageHeader, AppPageShell } from "@/components/layout/AppPageChrome";
 import { useAppStore } from "@/store/appStore";
+import { useEscapeWhen } from "@/hooks/useEscapeWhen";
 
 export function ClientConnectionsDetachedPage() {
   const rawClientId = useParams().clientId ?? "";
@@ -97,6 +98,15 @@ export function ClientConnectionsDetachedPage() {
   useEffect(() => {
     void loadLists();
   }, [loadLists]);
+
+  const overlayEscapeBlocked = Boolean(delRdpId || delWebId);
+
+  useEscapeWhen(Boolean(showRdpForm && catalogSettings && !overlayEscapeBlocked), () =>
+    setShowRdpForm(false),
+  );
+  useEscapeWhen(Boolean(showWebForm && catalogSettings && !overlayEscapeBlocked), () =>
+    setShowWebForm(false),
+  );
 
   const client = clients.find((c) => c.id === clientId) ?? null;
   const clientsForForms = useMemo(

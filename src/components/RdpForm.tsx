@@ -1049,7 +1049,9 @@ export function RdpForm({
               Password {pwdSet ? "(lascia vuoto per non modificare)" : ""}
             </label>
             <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-              Da file .rdp: utente e dominio compaiono nell’anteprima sopra; qui salvi solo la password nel vault se serve.
+              Da file .rdp: utente e dominio compaiono nell’anteprima sopra. Se il file ha già la password di Windows
+              incorporata e lasci vuoto il campo qui, all’avvio resta quella del file. Se salvi una password nel vault,
+              all’avvio viene usata quella (e le righe password incorporate nel file vengono ignorate).
             </p>
 
             <input

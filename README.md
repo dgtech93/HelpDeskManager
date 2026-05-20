@@ -99,7 +99,7 @@ Equivalente a `npm run tauri:build`. Al termine trovi l’installer in:
 
 `src-tauri/target/release/bundle/nsis/`
 
-File tipico: **`HelpDesk Manager_0.1.0_x64-setup.exe`** (nome legato a versione in `tauri.conf.json`).
+File tipico: **`HelpDesk Manager_0.2.0_x64-setup.exe`** (nome legato a `version` in `package.json` / `src-tauri/tauri.conf.json`).
 
 ### Cosa fa l’installer
 
@@ -114,6 +114,23 @@ File tipico: **`HelpDesk Manager_0.1.0_x64-setup.exe`** (nome legato a versione 
 
 Copia il file `*-setup.exe` su chiavetta, rete o intranet: l’utente lo esegue e segue il wizard. Non serve installare Node o Rust sul PC di destinazione.
 
+### Release su GitHub
+
+1. Allinea **la stessa versione semver** in `package.json`, `src-tauri/tauri.conf.json` e `src-tauri/Cargo.toml` (l’UI *Impostazioni → Informazioni* legge la versione da `package.json`).
+2. `npm install` se necessario, poi `npm run build:installer` e verifica l’exe in `src-tauri/target/release/bundle/nsis/`.
+3. Commit, tag e push (adatta messaggio e branch se serve):
+   ```powershell
+   git add -A
+   git commit -m "chore: release 0.2.0"
+   git tag v0.2.0
+   git push origin main
+   git push origin v0.2.0
+   ```
+4. Crea la release GitHub e allega l’installer (percorso con spazi tra virgolette):
+   ```powershell
+   gh release create v0.2.0 --title "HelpDesk Manager 0.2.0" --generate-notes "src-tauri/target/release/bundle/nsis/HelpDesk Manager_0.2.0_x64-setup.exe"
+   ```
+
 ### Altre piattaforme
 
 Senza `tauri.windows.conf.json` attivo, `npm run tauri:build` produce anche bundle macOS/Linux se compili su quei sistemi. Su Windows viene generato principalmente l’installer NSIS.
@@ -121,7 +138,7 @@ Senza `tauri.windows.conf.json` attivo, `npm run tauri:build` produce anche bund
 ## Sicurezza (note operative)
 
 - Le password RDP/VPN non sono mai memorizzate in chiaro nel database; sono blob **AES-256-GCM** derivati dalla master password (**Argon2id** + sale salvato in `settings`).
-- Il file `.rdp` generato su Windows **non** include la password; di solito comparirà il prompt credenziali RDP.
+- Il file `.rdp` generato su Windows **non** include la password in chiaro; con vault sbloccato la password viene passata via Credenziali Windows (`cmdkey`). Con **file .rdp esterno** che contiene già la password incorporata (blob Windows), se non salvi una password nel vault viene lasciata quella del file; se salvi una password nel vault prevale la tua.
 - Su Linux/macOS la password può comparire nella **riga di comando** del processo `xfreerdp` (limite noto dei client RDP da CLI).
 - Dopo import backup il vault viene **bloccato**: serve reinserire la master password.
 - Non sono loggati segreti né master password; evitare screenshot della schermata di sblocco in ambienti non fidati.

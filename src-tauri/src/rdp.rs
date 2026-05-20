@@ -14,6 +14,48 @@ use std::thread;
 
 use std::time::Duration;
 
+/// Salva le credenziali in Credenziali di Windows per `TERMSRV/<host>` così MSTSC le usa (NLA).
+/// Le rimuove dopo 120 s (stesso schema del ramo file .rdp).
+#[cfg(target_os = "windows")]
+fn seed_cmdkey_termsrv(
+    termsrv_host: &str,
+    domain: Option<&String>,
+    username: Option<&String>,
+    password_plain: Option<&str>,
+) {
+    let Some(pw) = password_plain.filter(|p| !p.trim().is_empty()) else {
+        return;
+    };
+    let host_key = rdp_file::address_host_part(termsrv_host);
+    if host_key.trim().is_empty() {
+        return;
+    }
+    let generic = format!("TERMSRV/{host_key}");
+    let cmdkey_user = match (&domain, &username) {
+        (Some(dom), Some(u)) if !dom.trim().is_empty() && !u.trim().is_empty() => {
+            format!("{}\\{}", dom.trim(), u.trim())
+        }
+        (_, Some(u)) if !u.trim().is_empty() => u.trim().to_string(),
+        _ => return,
+    };
+    let _ = Command::new("cmdkey.exe")
+        .arg(format!("/generic:{generic}"))
+        .arg(format!("/user:{cmdkey_user}"))
+        .arg(format!("/pass:{pw}"))
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    let generic_del = generic.clone();
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(120));
+        let _ = Command::new("cmdkey.exe")
+            .arg(format!("/delete:{generic_del}"))
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    });
+}
+
 #[cfg(target_os = "windows")]
 fn launch_windows(rdp: &RdpConnection, password_plain: Option<&str>) -> Result<(), String> {
     let tmp_dir = std::env::temp_dir();
@@ -29,51 +71,36 @@ fn launch_windows(rdp: &RdpConnection, password_plain: Option<&str>) -> Result<(
             let raw = rdp_file::decode_rdp_bytes(&bytes)
                 .map_err(|m| err_msg(AppError::RdpLaunchError, Some(&m)))?;
 
-            if !rdp_file::needs_secret_lines_removed(&raw) {
+            let has_pw = password_plain.map(|p| !p.trim().is_empty()).unwrap_or(false);
+            let file_has_embedded_secret = rdp_file::needs_secret_lines_removed(&raw);
+
+            if file_has_embedded_secret && !has_pw {
+                // File .rdp già con password incorporata (blob Windows): non rimuoverla se nel vault non c'è un'alternativa.
                 fs::copy(src_path, &file_path)
                     .map_err(|e| err_msg(AppError::RdpLaunchError, Some(&e.to_string())))?;
             } else {
-                let stripped = rdp_file::strip_credential_lines(&raw);
-                rdp_file::write_rdp_utf16_le_bom(&file_path, &stripped)
+                let mut body = if file_has_embedded_secret {
+                    rdp_file::strip_credential_lines(&raw)
+                } else {
+                    raw.clone()
+                };
+                if has_pw {
+                    body = rdp_file::apply_saved_cred_rdp_lines(&body);
+                }
+                rdp_file::write_rdp_utf16_le_bom(&file_path, &body)
                     .map_err(|e| err_msg(AppError::RdpLaunchError, Some(&e.to_string())))?;
             }
 
-            if let Some(pw) = password_plain.filter(|p| !p.is_empty()) {
-                let host_key = rdp_file::address_host_part(&rdp.host);
-
-                let generic = format!("TERMSRV/{host_key}");
-
-                let cmdkey_user = match (&rdp.domain, &rdp.username) {
-                    (Some(dom), Some(u)) if !dom.trim().is_empty() && !u.trim().is_empty() => {
-                        format!("{}\\{}", dom.trim(), u.trim())
-                    }
-
-                    (_, Some(u)) if !u.trim().is_empty() => u.trim().to_string(),
-
-                    _ => String::new(),
-                };
-
-                if !cmdkey_user.is_empty() {
-                    let _ = Command::new("cmdkey.exe")
-                        .arg(format!("/generic:{generic}"))
-                        .arg(format!("/user:{cmdkey_user}"))
-                        .arg(format!("/pass:{pw}"))
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
-                        .status();
-
-                    let generic_del = generic.clone();
-
-                    thread::spawn(move || {
-                        thread::sleep(Duration::from_secs(120));
-
-                        let _ = Command::new("cmdkey.exe")
-                            .arg(format!("/delete:{generic_del}"))
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .status();
-                    });
-                }
+            if has_pw {
+                let host_for_cmdkey = rdp_file::parse_rdp_contents(&raw)
+                    .map(|p| p.host)
+                    .unwrap_or_else(|_| rdp.host.trim().to_string());
+                seed_cmdkey_termsrv(
+                    &host_for_cmdkey,
+                    rdp.domain.as_ref(),
+                    rdp.username.as_ref(),
+                    password_plain,
+                );
             }
 
             let mut cmd = Command::new("mstsc.exe");
@@ -118,24 +145,23 @@ fn launch_windows(rdp: &RdpConnection, password_plain: Option<&str>) -> Result<(
         _ => String::new(),
     };
 
+    let has_pw = password_plain.map(|p| !p.trim().is_empty()).unwrap_or(false);
+    // Con password salvata: non forzare il prompt (cmdkey fornisce la password a NLA).
+    let cred_lines = if has_pw {
+        "authentication level:i:0\nprompt for credentials:i:0\nenablecredsspsupport:i:1\n"
+    } else {
+        "authentication level:i:0\nprompt for credentials:i:1\n"
+    };
+
     let mut contents = format!(
-
-        "full address:s:{}:{}\n{}{}desktopwidth:i:{}\ndesktopheight:i:{}\nsession bpp:i:{}\nredirectclipboard:{redirect_clipboard}\nauthentication level:i:0\nprompt for credentials:i:1\n",
-
+        "full address:s:{}:{}\n{}{}desktopwidth:i:{}\ndesktopheight:i:{}\nsession bpp:i:{}\nredirectclipboard:{redirect_clipboard}\n{cred_lines}",
         rdp.host.trim(),
-
         rdp.port,
-
         screen_mode_line,
-
         user_line,
-
         rdp.resolution_width,
-
         rdp.resolution_height,
-
         rdp.color_depth,
-
     );
 
     if let Some(gw) = &rdp.gateway_host {
@@ -144,14 +170,19 @@ fn launch_windows(rdp: &RdpConnection, password_plain: Option<&str>) -> Result<(
         }
     }
 
-    fs::write(&file_path, contents)
+    rdp_file::write_rdp_utf16_le_bom(&file_path, &contents)
         .map_err(|e| err_msg(AppError::RdpLaunchError, Some(&e.to_string())))?;
+
+    seed_cmdkey_termsrv(
+        rdp.host.trim(),
+        rdp.domain.as_ref(),
+        rdp.username.as_ref(),
+        password_plain,
+    );
 
     let mut cmd = Command::new("mstsc.exe");
 
     cmd.arg(&file_path);
-
-    let _ = password_plain;
 
     cmd.stdin(Stdio::null());
 
@@ -164,7 +195,7 @@ fn launch_windows(rdp: &RdpConnection, password_plain: Option<&str>) -> Result<(
     let path_clone = file_path.clone();
 
     thread::spawn(move || {
-        thread::sleep(Duration::from_secs(4));
+        thread::sleep(Duration::from_secs(8));
 
         let _ = fs::remove_file(path_clone);
     });

@@ -222,10 +222,45 @@ pub fn launch_vpn_connection(
         }
     }
 
+    #[cfg(target_os = "windows")]
+    if let Some(exe) = vpn
+        .config_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let path = Path::new(exe);
+        if path.is_file() {
+            if path
+                .extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| e.eq_ignore_ascii_case("exe"))
+            {
+                let work_dir = path.parent().unwrap_or_else(|| Path::new("."));
+                Command::new(path)
+                    .current_dir(work_dir)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+                    .map_err(|e| {
+                        err_msg(
+                            AppError::VpnLaunchError,
+                            Some(&format!("Impossibile avviare il client VPN: {e}")),
+                        )
+                    })?;
+                return Ok(());
+            }
+        }
+    }
+
     if t.contains("anyconnect") || t.contains("cisco") {
         return Err(err_msg(
             AppError::VpnLaunchError,
-            Some("Cisco AnyConnect va avviato manualmente"),
+            Some(
+                "Cisco AnyConnect: indica il percorso completo di vpnui.exe (o l’eseguibile del client) \
+                 nel campo «Percorso file config», oppure avvia il client manualmente.",
+            ),
         ));
     }
 

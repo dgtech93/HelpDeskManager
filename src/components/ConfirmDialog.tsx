@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { useEscapeWhen } from "@/hooks/useEscapeWhen";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -22,6 +23,8 @@ export function ConfirmDialog({
   onCancel,
   danger,
 }: Props) {
+  useEscapeWhen(open, onCancel);
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

@@ -30,6 +30,7 @@ import { CollaboratorsBook } from "@/components/collaborators/CollaboratorsBook"
 import { AppPageHeader } from "@/components/layout/AppPageChrome";
 import { Building2, Plus, Search } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
+import { useEscapeWhen } from "@/hooks/useEscapeWhen";
 
 export function ClientsPage() {
   const vaultOk = useAppStore((s) => s.vaultUnlocked);
@@ -116,6 +117,19 @@ export function ClientsPage() {
     setShowContactsBook(false);
     setShowCollaboratorsPanel(false);
   }, [selectedId]);
+
+  const overlayEscapeBlocked = Boolean(delVpnId || delRdpId || delWebId);
+
+  useEscapeWhen(Boolean(showCollaboratorsPanel && selectedId && !overlayEscapeBlocked), () =>
+    setShowCollaboratorsPanel(false),
+  );
+  useEscapeWhen(Boolean(showContactsBook && selectedId && !overlayEscapeBlocked), () =>
+    setShowContactsBook(false),
+  );
+  useEscapeWhen(showClientForm && !overlayEscapeBlocked, () => setShowClientForm(false));
+  useEscapeWhen(Boolean(showVpnForm && selectedId && !overlayEscapeBlocked), () => setShowVpnForm(false));
+  useEscapeWhen(Boolean(showRdpForm && selectedId && !overlayEscapeBlocked), () => setShowRdpForm(false));
+  useEscapeWhen(Boolean(showWebForm && selectedId && !overlayEscapeBlocked), () => setShowWebForm(false));
 
   useEffect(() => {
     if (!selectedId) {
@@ -389,8 +403,10 @@ export function ClientsPage() {
         <div className="fixed inset-0 z-40 overflow-y-auto bg-black/40 p-4 backdrop-blur-sm">
           <div className="mx-auto mt-10 max-w-3xl pb-10">
             <VpnForm
+              key={editVpn?.id ?? `new-vpn-${selectedId}`}
               clients={clients}
               initial={editVpn}
+              defaultClientId={editVpn ? null : selectedId}
               onCancel={() => setShowVpnForm(false)}
               onSubmit={async (v) => {
                 try {

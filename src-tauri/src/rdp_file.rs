@@ -50,6 +50,30 @@ fn split_host_port(addr: &str) -> (String, i64) {
     (addr.to_string(), 3389)
 }
 
+/// Per uso con `cmdkey` + password salvata: evita che MSTSC mostri il prompt e abilita CredSSP.
+pub fn apply_saved_cred_rdp_lines(content: &str) -> String {
+    let mut has_credssp = false;
+    let mut out = String::with_capacity(content.len().saturating_add(80));
+    for line in content.lines() {
+        let line = line.trim_end_matches('\r');
+        if let Some((k, _)) = split_key_value(line) {
+            if k.trim().eq_ignore_ascii_case("prompt for credentials") {
+                out.push_str("prompt for credentials:i:0\n");
+                continue;
+            }
+            if k.trim().eq_ignore_ascii_case("enablecredsspsupport") {
+                has_credssp = true;
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    if !has_credssp {
+        out.push_str("enablecredsspsupport:i:1\n");
+    }
+    out
+}
+
 /// Solo righe che salvano segreti incorporati (blob password di MSTSC).
 /// Evita di rimuovere chiavi come «gatewaycredentialssource» che non sono password.
 fn key_is_embedded_secret_line(key: &str) -> bool {
