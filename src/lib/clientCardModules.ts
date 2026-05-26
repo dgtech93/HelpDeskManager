@@ -156,13 +156,25 @@ function coerceSpan(v: unknown): number {
   return Math.min(48, Math.round(n));
 }
 
+function coerceCellHeightPx(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number.parseFloat(String(v));
+  if (!Number.isFinite(n)) return null;
+  return Math.min(900, Math.max(190, Math.round(n)));
+}
+
 function normalizeLayoutCell(raw: unknown): ClientCardLayoutCell | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const panelRaw = typeof o.panelId === "string" ? o.panelId : "";
   if (!isPanelId(panelRaw)) return null;
   const id = typeof o.id === "string" && o.id.trim() ? o.id.trim() : newSlotId("cell");
-  return { id, panelId: panelRaw, span: coerceSpan(o.span) };
+  return {
+    id,
+    panelId: panelRaw,
+    span: coerceSpan(o.span),
+    heightPx: coerceCellHeightPx(o.heightPx ?? o.height_px),
+  };
 }
 
 function normalizeLayoutRow(raw: unknown): ClientCardLayoutRow | null {
@@ -210,6 +222,7 @@ function sanitizeRowDimensions(rows: ClientCardLayoutRow[]): ClientCardLayoutRow
       cells: row.cells.map((c) => ({
         ...c,
         span: coerceSpan(c.span),
+        heightPx: coerceCellHeightPx(c.heightPx),
       })),
     };
   });

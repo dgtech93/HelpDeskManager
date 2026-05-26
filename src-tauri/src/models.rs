@@ -400,6 +400,8 @@ pub struct ClientCardLayoutCell {
     pub panel_id: String,
     #[serde(default = "default_span_one_i32")]
     pub span: i32,
+    #[serde(default)]
+    pub height_px: Option<i32>,
 }
 
 fn default_span_one_i32() -> i32 {

@@ -99,7 +99,7 @@ Equivalente a `npm run tauri:build`. Al termine trovi l’installer in:
 
 `src-tauri/target/release/bundle/nsis/`
 
-File tipico: **`HelpDesk Manager_0.2.0_x64-setup.exe`** (nome legato a `version` in `package.json` / `src-tauri/tauri.conf.json`).
+File tipico: **`HelpDesk Manager_0.3.0_x64-setup.exe`** (nome legato a `version` in `package.json` / `src-tauri/tauri.conf.json`).
 
 ### Cosa fa l’installer
 
@@ -121,14 +121,14 @@ Copia il file `*-setup.exe` su chiavetta, rete o intranet: l’utente lo esegue 
 3. Commit, tag e push (adatta messaggio e branch se serve):
    ```powershell
    git add -A
-   git commit -m "chore: release 0.2.0"
-   git tag v0.2.0
+   git commit -m "chore: release 0.3.0"
+   git tag v0.3.0
    git push origin main
-   git push origin v0.2.0
+   git push origin v0.3.0
    ```
 4. Crea la release GitHub e allega l’installer (percorso con spazi tra virgolette):
    ```powershell
-   gh release create v0.2.0 --title "HelpDesk Manager 0.2.0" --generate-notes "src-tauri/target/release/bundle/nsis/HelpDesk Manager_0.2.0_x64-setup.exe"
+   gh release create v0.3.0 --title "HelpDesk Manager 0.3.0" --generate-notes "src-tauri/target/release/bundle/nsis/HelpDesk Manager_0.3.0_x64-setup.exe"
    ```
 
 ### Altre piattaforme

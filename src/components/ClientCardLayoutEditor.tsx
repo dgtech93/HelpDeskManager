@@ -152,6 +152,14 @@ function coerceSpanInput(n: number): number {
   return Math.min(48, Math.max(1, rounded));
 }
 
+function coerceSectionHeightInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const n = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(900, Math.max(190, Math.round(n)));
+}
+
 function RowTailDropZone({ rowId }: { rowId: string }) {
   const id = tailDropId(rowId);
   const { setNodeRef, isOver } = useDroppable({
@@ -242,6 +250,32 @@ function SortableCellCard(props: {
               );
             }}
             className="w-20 rounded-md border border-slate-200 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+        </label>
+
+        <label className="flex flex-col gap-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          Altezza sezione (px)
+          <input
+            type="number"
+            min={190}
+            max={900}
+            step={10}
+            placeholder="auto"
+            value={cell.heightPx ?? ""}
+            onChange={(e) => {
+              const heightPx = coerceSectionHeightInput(e.target.value);
+              patchRows(
+                rows.map((r, i) =>
+                  i === rowIndex
+                    ? {
+                        ...r,
+                        cells: r.cells.map((c) => (c.id === cell.id ? { ...c, heightPx } : c)),
+                      }
+                    : r,
+                ),
+              );
+            }}
+            className="w-24 rounded-md border border-slate-200 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900"
           />
         </label>
 

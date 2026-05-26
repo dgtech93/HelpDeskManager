@@ -396,6 +396,15 @@ fn unwrap_vault_key_with_recovery_passphrase(
 }
 
 fn vault_unlocked_key(state: &AppState) -> Result<Zeroizing<[u8; 32]>, String> {
+    let guard = state
+        .vault_key
+        .lock()
+        .map_err(|_| err_msg(AppError::CryptoError, None))?;
+    if let Some(ref k) = *guard {
+        return Ok(k.clone());
+    }
+    drop(guard);
+
     try_restore_vault_session(state);
     let guard = state
         .vault_key

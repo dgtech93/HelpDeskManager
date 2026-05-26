@@ -206,6 +206,11 @@ export function ClientProfileCard({
 
   const noBodyPanels = !hasAnyVisibleLayoutCell;
 
+  const sectionHeightPx = (panelId: ClientCardPanelId, configured?: number | null): number | null => {
+    if (configured != null && Number.isFinite(configured)) return Math.max(190, Math.round(configured));
+    return panelId === "rdp" || panelId === "web" ? 248 : null;
+  };
+
 
 
   return (
@@ -428,16 +433,23 @@ export function ClientProfileCard({
                     style={{ gridTemplateColumns: template }}
                   >
                     {visibleCells.map((cell) => (
-                      <div
-                        key={cell.id}
-                        className={cn(
-                          "min-w-0 min-h-0",
-                          row.heightMode === "pixels" && "overflow-y-auto",
-                          row.heightMode === "stretch" && "overflow-y-auto",
-                        )}
-                      >
-                        {renderPanel(cell.panelId)}
-                      </div>
+                      (() => {
+                        const heightPx = sectionHeightPx(cell.panelId, cell.heightPx);
+                        return (
+                          <div
+                            key={cell.id}
+                            className={cn(
+                              "min-w-0 min-h-0",
+                              heightPx != null && "overflow-hidden",
+                              heightPx == null && row.heightMode === "pixels" && "overflow-y-auto",
+                              heightPx == null && row.heightMode === "stretch" && "overflow-y-auto",
+                            )}
+                            style={heightPx != null ? { height: heightPx, minHeight: heightPx } : undefined}
+                          >
+                            {renderPanel(cell.panelId)}
+                          </div>
+                        );
+                      })()
                     ))}
                   </div>
                 </div>

@@ -29,6 +29,91 @@ import {
 type MatrixCatalog = Pick<AppSettings, "environments" | "versionOptions" | "releaseOptions">;
 
 
+type EnvironmentBadge = {
+  id: string;
+  label: string;
+};
+
+
+const ENVIRONMENT_BADGE_CLASSES = [
+  "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/45 dark:bg-violet-950/55 dark:text-violet-200",
+  "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/45 dark:bg-sky-950/55 dark:text-sky-200",
+  "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-950/55 dark:text-emerald-200",
+  "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/45 dark:bg-amber-950/55 dark:text-amber-200",
+  "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/45 dark:bg-rose-950/55 dark:text-rose-200",
+  "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-500/45 dark:bg-indigo-950/55 dark:text-indigo-200",
+] as const;
+
+
+function stableStringIndex(key: string, modulus: number): number {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) {
+    h = (Math.imul(31, h) + key.charCodeAt(i)) | 0;
+  }
+  return modulus > 0 ? Math.abs(h) % modulus : 0;
+}
+
+
+function environmentBadgeClass(environmentId: string): string {
+  if (!environmentId.trim()) return "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300";
+  return ENVIRONMENT_BADGE_CLASSES[
+    stableStringIndex(environmentId, ENVIRONMENT_BADGE_CLASSES.length)
+  ]!;
+}
+
+
+function environmentName(environmentId: string, catalog: MatrixCatalog): string {
+  return (
+    catalog.environments.find((env) => env.id === environmentId)?.name?.trim() ||
+    environmentId
+  );
+}
+
+
+function rdpEnvironmentBadges(r: RdpConnection, catalog?: MatrixCatalog): EnvironmentBadge[] {
+  if (!catalog) return [];
+  const rawIds =
+    r.environmentDeployments
+      ?.map((d) => (d.environmentId ?? "").trim())
+      .filter(Boolean) ?? [];
+  const ids = rawIds.length > 0 ? rawIds : [(r.environmentId ?? "").trim()].filter(Boolean);
+  return [...new Set(ids)].map((id) => ({ id, label: environmentName(id, catalog) }));
+}
+
+
+function webEnvironmentBadges(w: WebAccess, catalog?: MatrixCatalog): EnvironmentBadge[] {
+  if (!catalog) return [];
+  const id = (w.environmentId ?? "").trim();
+  return id ? [{ id, label: environmentName(id, catalog) }] : [];
+}
+
+
+function EnvironmentBadges({ badges }: { badges: EnvironmentBadge[] }) {
+  if (badges.length === 0) return null;
+  return (
+    <>
+      {badges.slice(0, 3).map((badge) => (
+        <span
+          key={badge.id}
+          title={badge.label}
+          className={cn(
+            "inline-flex max-w-[6.75rem] shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide",
+            environmentBadgeClass(badge.id),
+          )}
+        >
+          <span className="truncate">{badge.label}</span>
+        </span>
+      ))}
+      {badges.length > 3 ? (
+        <span className="inline-flex shrink-0 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold leading-none text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          +{badges.length - 3}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+
 
 export type ConnectionsSplitSharedProps = {
 
@@ -356,6 +441,8 @@ export function ClientConnectionsRdpPanel() {
 
     rdpDetailId,
 
+    connectionCatalog,
+
   } = useConnectionsSplit();
 
 
@@ -366,7 +453,7 @@ export function ClientConnectionsRdpPanel() {
 
   return (
 
-    <div className="flex min-h-[11rem] min-w-0 flex-1 shrink-0 flex-col overflow-hidden rounded-xl border border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-500/35 dark:bg-slate-900/90 lg:min-h-[10rem]">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-500/35 dark:bg-slate-900/90">
 
       <div className="flex shrink-0 flex-wrap items-stretch gap-0 border-b border-emerald-200/60 bg-emerald-50/70 dark:border-emerald-500/25 dark:bg-emerald-950/40 sm:flex-nowrap">
 
@@ -394,7 +481,7 @@ export function ClientConnectionsRdpPanel() {
 
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto border-emerald-200/40 px-3 pb-2 pt-2 dark:border-emerald-500/15">
+      <div className="scrollbar-context-emerald min-h-0 flex-1 overflow-y-auto overflow-x-auto border-emerald-200/40 px-3 pb-2 pt-2 dark:border-emerald-500/15">
 
         {rdp.length === 0 ? (
 
@@ -406,19 +493,21 @@ export function ClientConnectionsRdpPanel() {
 
         ) : (
 
-          <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
 
             <thead>
 
               <tr className="sticky top-0 z-[1] border-b border-emerald-200/70 bg-emerald-50/95 text-[11px] font-semibold uppercase tracking-wide text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/95 dark:text-emerald-300">
 
-                <th className="px-2 py-2">Host</th>
+                <th className="min-w-[6rem] max-w-[11rem] px-2 py-2">Nome</th>
+
+                <th className="min-w-0 px-2 py-2">Host</th>
 
                 <th className="min-w-[8rem] px-2 py-2">Dominio \ utente</th>
 
-                <th className="min-w-[9rem] px-2 py-2">Password</th>
+                <th className="sticky right-[3.25rem] z-[4] w-[9.75rem] min-w-[9.75rem] bg-emerald-50/95 px-2 py-2 shadow-[-10px_0_16px_-16px_rgba(15,23,42,0.65)] dark:bg-emerald-950/95">Password</th>
 
-                <th className="w-[3.25rem] shrink-0 px-1 py-2 text-right" aria-hidden />
+                <th className="sticky right-0 z-[5] w-[3.25rem] min-w-[3.25rem] shrink-0 bg-emerald-50/95 px-1 py-2 text-right dark:bg-emerald-950/95" aria-hidden />
 
               </tr>
 
@@ -431,6 +520,8 @@ export function ClientConnectionsRdpPanel() {
                 const account = rdpDomainUserDisplay(r.domain, r.username);
 
                 const fromFile = Boolean(r.rdpFilePath?.trim());
+                const envBadges = rdpEnvironmentBadges(r, connectionCatalog);
+                const rowSelected = rdpDetailId === r.id;
 
                 return (
 
@@ -442,9 +533,9 @@ export function ClientConnectionsRdpPanel() {
 
                     className={cn(
 
-                      "cursor-pointer border-b border-emerald-100/90 align-top last:border-0 dark:border-emerald-900/40",
+                      "group cursor-pointer border-b border-emerald-100/90 align-top last:border-0 dark:border-emerald-900/40",
 
-                      rdpDetailId === r.id
+                      rowSelected
 
                         ? "bg-emerald-100/80 dark:bg-emerald-950/50"
 
@@ -454,7 +545,23 @@ export function ClientConnectionsRdpPanel() {
 
                   >
 
-                    <td className="max-w-[42%] px-2 py-2 align-middle font-mono text-[13px] leading-snug text-slate-800 dark:text-slate-200">
+                    <td className="min-w-0 max-w-[12rem] px-2 py-2 align-middle text-[13px] font-medium leading-snug text-slate-900 dark:text-slate-50">
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+
+                        <span className="min-w-0 max-w-full truncate" title={r.name}>
+
+                          {r.name}
+
+                        </span>
+
+                        <EnvironmentBadges badges={envBadges} />
+
+                      </div>
+
+                    </td>
+
+                    <td className="max-w-[36%] min-w-0 px-2 py-2 align-middle font-mono text-[13px] leading-snug text-slate-800 dark:text-slate-200">
 
                       <span className="line-clamp-2 break-all" title={fromFile ? `${r.host} — da file .rdp` : r.host}>
 
@@ -484,7 +591,14 @@ export function ClientConnectionsRdpPanel() {
 
                     </td>
 
-                    <td className="min-w-[8.5rem] max-w-[14rem] px-2 py-2 align-middle">
+                    <td
+                      className={cn(
+                        "sticky right-[3.25rem] z-[2] w-[9.75rem] min-w-[9.75rem] max-w-[9.75rem] px-2 py-2 align-middle shadow-[-10px_0_16px_-16px_rgba(15,23,42,0.65)]",
+                        rowSelected
+                          ? "bg-emerald-100/95 dark:bg-emerald-950/95"
+                          : "bg-emerald-50/95 group-hover:bg-emerald-50/95 dark:bg-slate-900/95 dark:group-hover:bg-emerald-950/90",
+                      )}
+                    >
 
                       <ConnectionPasswordRevealCell
 
@@ -500,7 +614,15 @@ export function ClientConnectionsRdpPanel() {
 
                     </td>
 
-                    <td className="px-1 py-1.5 align-middle" onDoubleClick={(e) => e.stopPropagation()}>
+                    <td
+                      className={cn(
+                        "sticky right-0 z-[3] w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 align-middle",
+                        rowSelected
+                          ? "bg-emerald-100/95 dark:bg-emerald-950/95"
+                          : "bg-emerald-50/95 group-hover:bg-emerald-50/95 dark:bg-slate-900/95 dark:group-hover:bg-emerald-950/90",
+                      )}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                    >
 
                       <div className="flex justify-end">
 
@@ -540,12 +662,6 @@ export function ClientConnectionsRdpPanel() {
 
       </div>
 
-      <p className="shrink-0 border-t border-emerald-200/50 px-3 py-2 text-xs text-emerald-900/75 dark:border-emerald-500/25 dark:text-emerald-300/85">
-
-        Doppio clic sulla riga: dettaglio e copia.
-
-      </p>
-
     </div>
 
   );
@@ -572,6 +688,8 @@ export function ClientConnectionsWebPanel() {
 
     webDetailId,
 
+    connectionCatalog,
+
   } = useConnectionsSplit();
 
 
@@ -582,7 +700,7 @@ export function ClientConnectionsWebPanel() {
 
   return (
 
-    <div className="flex min-h-[11rem] min-w-0 flex-1 shrink-0 flex-col overflow-hidden rounded-xl border border-indigo-200/80 bg-indigo-50/40 dark:border-indigo-400/40 dark:bg-slate-900/90 lg:min-h-[10rem]">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-indigo-200/80 bg-indigo-50/40 dark:border-indigo-400/40 dark:bg-slate-900/90">
 
       <div className="flex shrink-0 flex-wrap items-stretch gap-0 border-b border-indigo-200/60 bg-indigo-50/70 dark:border-indigo-400/35 dark:bg-indigo-950/35 sm:flex-nowrap">
 
@@ -610,7 +728,7 @@ export function ClientConnectionsWebPanel() {
 
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto border-indigo-200/40 px-3 pb-2 pt-2 dark:border-indigo-500/15">
+      <div className="scrollbar-context-indigo min-h-0 flex-1 overflow-y-auto overflow-x-auto border-indigo-200/40 px-3 pb-2 pt-2 dark:border-indigo-500/15">
 
         {web.length === 0 ? (
 
@@ -622,21 +740,21 @@ export function ClientConnectionsWebPanel() {
 
         ) : (
 
-          <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
 
             <thead>
 
               <tr className="sticky top-0 z-[1] border-b border-indigo-200/70 bg-indigo-50/95 text-[11px] font-semibold uppercase tracking-wide text-indigo-950 dark:border-indigo-500/30 dark:bg-indigo-950/95 dark:text-indigo-300">
 
-                <th className="px-2 py-2">URL</th>
+                <th className="min-w-[6rem] max-w-[11rem] px-2 py-2">Nome</th>
 
-                <th className="min-w-[5rem] px-2 py-2">Nome</th>
+                <th className="min-w-0 px-2 py-2">URL</th>
 
                 <th className="min-w-[8rem] px-2 py-2">Dominio \ utente</th>
 
-                <th className="min-w-[9rem] px-2 py-2">Password</th>
+                <th className="sticky right-[3.25rem] z-[4] w-[9.75rem] min-w-[9.75rem] bg-indigo-50/95 px-2 py-2 shadow-[-10px_0_16px_-16px_rgba(15,23,42,0.65)] dark:bg-indigo-950/95">Password</th>
 
-                <th className="w-[3.25rem] shrink-0 px-1 py-2 text-right" aria-hidden />
+                <th className="sticky right-0 z-[5] w-[3.25rem] min-w-[3.25rem] shrink-0 bg-indigo-50/95 px-1 py-2 text-right dark:bg-indigo-950/95" aria-hidden />
 
               </tr>
 
@@ -647,6 +765,8 @@ export function ClientConnectionsWebPanel() {
               {web.map((wRow) => {
 
                 const account = rdpDomainUserDisplay(wRow.domain, wRow.username);
+                const envBadges = webEnvironmentBadges(wRow, connectionCatalog);
+                const rowSelected = webDetailId === wRow.id;
 
                 return (
 
@@ -658,9 +778,9 @@ export function ClientConnectionsWebPanel() {
 
                     className={cn(
 
-                      "cursor-pointer border-b border-indigo-100/90 align-top last:border-0 dark:border-indigo-900/40",
+                      "group cursor-pointer border-b border-indigo-100/90 align-top last:border-0 dark:border-indigo-900/40",
 
-                      webDetailId === wRow.id
+                      rowSelected
 
                         ? "bg-indigo-100/80 dark:bg-indigo-950/50"
 
@@ -670,7 +790,23 @@ export function ClientConnectionsWebPanel() {
 
                   >
 
-                    <td className="max-w-[40%] px-2 py-2 align-middle font-mono text-[13px] leading-snug">
+                    <td className="min-w-0 max-w-[12rem] px-2 py-2 align-middle text-[13px] font-medium leading-snug text-slate-900 dark:text-slate-50">
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+
+                        <span className="min-w-0 max-w-full truncate" title={wRow.name}>
+
+                          {wRow.name}
+
+                        </span>
+
+                        <EnvironmentBadges badges={envBadges} />
+
+                      </div>
+
+                    </td>
+
+                    <td className="max-w-[36%] min-w-0 px-2 py-2 align-middle font-mono text-[13px] leading-snug">
 
                       <span
 
@@ -686,16 +822,6 @@ export function ClientConnectionsWebPanel() {
 
                     </td>
 
-                    <td className="min-w-0 px-2 py-2 align-middle font-medium text-[13px] leading-snug text-slate-900 dark:text-slate-50">
-
-                      <span className="line-clamp-3" title={wRow.name}>
-
-                        {wRow.name}
-
-                      </span>
-
-                    </td>
-
                     <td className="min-w-0 px-2 py-2 align-middle font-mono text-[13px] leading-snug text-slate-700 dark:text-slate-300">
 
                       <span className="line-clamp-4" title={account || undefined}>
@@ -706,7 +832,14 @@ export function ClientConnectionsWebPanel() {
 
                     </td>
 
-                    <td className="min-w-[8.5rem] max-w-[14rem] px-2 py-2 align-middle">
+                    <td
+                      className={cn(
+                        "sticky right-[3.25rem] z-[2] w-[9.75rem] min-w-[9.75rem] max-w-[9.75rem] px-2 py-2 align-middle shadow-[-10px_0_16px_-16px_rgba(15,23,42,0.65)]",
+                        rowSelected
+                          ? "bg-indigo-100/95 dark:bg-indigo-950/95"
+                          : "bg-indigo-50/95 group-hover:bg-indigo-50/95 dark:bg-slate-900/95 dark:group-hover:bg-indigo-950/90",
+                      )}
+                    >
 
                       <ConnectionPasswordRevealCell
 
@@ -722,7 +855,15 @@ export function ClientConnectionsWebPanel() {
 
                     </td>
 
-                    <td className="px-1 py-1.5 align-middle" onDoubleClick={(e) => e.stopPropagation()}>
+                    <td
+                      className={cn(
+                        "sticky right-0 z-[3] w-[3.25rem] min-w-[3.25rem] px-1 py-1.5 align-middle",
+                        rowSelected
+                          ? "bg-indigo-100/95 dark:bg-indigo-950/95"
+                          : "bg-indigo-50/95 group-hover:bg-indigo-50/95 dark:bg-slate-900/95 dark:group-hover:bg-indigo-950/90",
+                      )}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                    >
 
                       <div className="flex justify-end">
 
@@ -761,12 +902,6 @@ export function ClientConnectionsWebPanel() {
         )}
 
       </div>
-
-      <p className="shrink-0 border-t border-indigo-200/50 px-3 py-2 text-xs text-indigo-950/80 dark:border-indigo-500/25 dark:text-indigo-300/90">
-
-        Doppio clic sulla riga: dettaglio e copia.
-
-      </p>
 
     </div>
 
