@@ -7,15 +7,21 @@ export function LocationMapPreview({
   query,
   className = "",
   emptyPlaceholder = false,
+  fillParent = false,
 }: {
   query: string;
   className?: string;
   /** Se vero e `query` è vuota, mostra un riquadro tratteggiato allineabile alla colonna sito. */
   emptyPlaceholder?: boolean;
+  /** Se vero, la mappa occupa tutta l'altezza disponibile del contenitore padre. */
+  fillParent?: boolean;
 }) {
   const trimmed = query.trim();
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const mapBoxClass = fillParent
+    ? "h-full min-h-[6.5rem]"
+    : "aspect-[16/7] min-h-[6.5rem]";
 
   useEffect(() => {
     if (!trimmed) {
@@ -57,9 +63,9 @@ export function LocationMapPreview({
     if (!emptyPlaceholder) return null;
     return (
       <div
-        className={`overflow-hidden rounded-lg border border-dashed border-slate-300/90 bg-slate-50/80 dark:border-slate-600 dark:bg-slate-900/40 ${className}`}
+        className={`overflow-hidden rounded-lg border border-dashed border-slate-300/90 bg-slate-50/80 dark:border-slate-600 dark:bg-slate-900/40 ${fillParent ? "h-full" : ""} ${className}`}
       >
-        <div className="relative flex aspect-[16/7] w-full min-h-[6.5rem] flex-col items-center justify-center gap-2 px-3 text-center text-[11px] text-slate-500 dark:text-slate-400">
+        <div className={`relative flex w-full ${mapBoxClass} flex-col items-center justify-center gap-2 px-3 text-center text-[11px] text-slate-500 dark:text-slate-400`}>
           <MapPinned className="h-8 w-8 opacity-45" aria-hidden />
           <span>Indica la sede in Modifica cliente per l&apos;anteprima sulla mappa.</span>
         </div>
@@ -69,15 +75,15 @@ export function LocationMapPreview({
 
   return (
     <div
-      className={`overflow-hidden rounded-lg border border-slate-200/90 bg-slate-100 shadow-inner dark:border-slate-700 dark:bg-slate-950/80 ${className}`}
+      className={`overflow-hidden rounded-lg border border-slate-200/90 bg-slate-100 shadow-inner dark:border-slate-700 dark:bg-slate-950/80 ${fillParent ? "h-full" : ""} ${className}`}
     >
       {loading ? (
-        <div className="flex aspect-[16/7] min-h-[6.5rem] animate-pulse items-center justify-center text-xs text-slate-500 dark:text-slate-400">
+        <div className={`flex ${mapBoxClass} animate-pulse items-center justify-center text-xs text-slate-500 dark:text-slate-400`}>
           Ricerca sulla mappa…
         </div>
       ) : src ? (
         <>
-        <div className="relative aspect-[16/7] w-full min-h-[6.5rem] overflow-hidden rounded-lg bg-slate-200/40 dark:bg-slate-900/80">
+        <div className={`relative w-full ${mapBoxClass} overflow-hidden rounded-lg bg-slate-200/40 dark:bg-slate-900/80`}>
             <iframe
               title="Anteprima mappa sede"
               className="absolute left-0 top-0 w-full border-0"
@@ -89,7 +95,7 @@ export function LocationMapPreview({
           </div>
         </>
       ) : (
-        <div className="flex aspect-[16/7] min-h-[6.5rem] flex-col items-center justify-center gap-2 px-3 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className={`flex ${mapBoxClass} flex-col items-center justify-center gap-2 px-3 text-center text-xs text-slate-500 dark:text-slate-400`}>
           <MapPinned className="h-8 w-8 opacity-50" aria-hidden />
           <span>Nessuna corrispondenza cartografica per questo testo.</span>
         </div>

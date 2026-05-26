@@ -236,10 +236,10 @@ export function ClientsPage() {
           </div>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="scrollbar-violet-subtle flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto pr-1">
           {selectedClient ? (
             <>
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <div className="flex min-w-0 flex-col">
                 <ClientConnectionsSplitProvider
                   rdp={rdp}
                   web={web}

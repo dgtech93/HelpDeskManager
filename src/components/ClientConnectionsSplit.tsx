@@ -453,7 +453,7 @@ export function ClientConnectionsRdpPanel() {
 
   return (
 
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-500/35 dark:bg-slate-900/90">
+    <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-emerald-200/80 bg-emerald-50/40 shadow-[0_18px_42px_-24px_rgba(6,95,70,0.55)] ring-1 ring-emerald-300/55 dark:border-emerald-500/35 dark:bg-slate-900/90 dark:shadow-[0_18px_46px_-22px_rgba(16,185,129,0.72)] dark:ring-emerald-400/45">
 
       <div className="flex shrink-0 flex-wrap items-stretch gap-0 border-b border-emerald-200/60 bg-emerald-50/70 dark:border-emerald-500/25 dark:bg-emerald-950/40 sm:flex-nowrap">
 
@@ -700,7 +700,7 @@ export function ClientConnectionsWebPanel() {
 
   return (
 
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-indigo-200/80 bg-indigo-50/40 dark:border-indigo-400/40 dark:bg-slate-900/90">
+    <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-indigo-200/80 bg-indigo-50/40 shadow-[0_18px_42px_-24px_rgba(67,56,202,0.5)] ring-1 ring-indigo-300/55 dark:border-indigo-400/40 dark:bg-slate-900/90 dark:shadow-[0_18px_46px_-22px_rgba(99,102,241,0.72)] dark:ring-indigo-400/45">
 
       <div className="flex shrink-0 flex-wrap items-stretch gap-0 border-b border-indigo-200/60 bg-indigo-50/70 dark:border-indigo-400/35 dark:bg-indigo-950/35 sm:flex-nowrap">
 

@@ -436,7 +436,7 @@ export interface ClientCardLayoutCell {
   panelId: ClientCardPanelId;
   /** Larghezza relativa nella riga (somma span → proporzioni, min 1). */
   span: number;
-  /** Altezza fissa opzionale della singola sezione (px). Vuoto/null = altezza predefinita. */
+  /** @deprecated L'altezza si gestisce sulla riga intera, non sulla singola sezione. */
   heightPx?: number | null;
 }
 

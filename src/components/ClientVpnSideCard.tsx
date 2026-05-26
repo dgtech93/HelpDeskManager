@@ -208,13 +208,13 @@ export function ClientVpnSideCard({
 
   return (
     <div
-      className={`relative flex w-full flex-col overflow-hidden rounded-2xl shadow-lg shadow-sky-900/[0.08] ring-1 ring-sky-300/55 dark:shadow-black/40 dark:ring-sky-500/35 ${className}`}
+      className={`relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl shadow-[0_22px_55px_-22px_rgba(2,132,199,0.72)] ring-1 ring-sky-300/70 dark:shadow-[0_22px_58px_-20px_rgba(56,189,248,0.9)] dark:ring-sky-400/55 ${className}`}
     >
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_10%_-20%,rgba(56,189,248,0.22),transparent),radial-gradient(90%_60%_at_100%_50%,rgba(99,102,241,0.12),transparent)] dark:bg-[radial-gradient(120%_80%_at_10%_-20%,rgba(56,189,248,0.15),transparent),radial-gradient(90%_60%_at_100%_40%,rgba(99,102,241,0.1),transparent)]"
         aria-hidden
       />
-      <div className="relative flex flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/93 backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-950/92">
+      <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/93 backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-950/92">
         <div className="shrink-0 border-b border-slate-100/90 px-3 py-2 dark:border-slate-700/80">
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex min-w-0 flex-1 basis-[8rem] items-center gap-2">
@@ -272,13 +272,7 @@ export function ClientVpnSideCard({
           </div>
         </div>
 
-        <div
-          className={
-            items.length > 1
-              ? "max-h-[min(40vh,280px)] space-y-2 overflow-y-auto px-3 py-2 pb-2"
-              : "space-y-2 px-3 py-2 pb-2"
-          }
-        >
+        <div className="scrollbar-violet-subtle min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-slate-100/90 bg-gradient-to-b from-transparent via-transparent to-sky-100/60 px-3 py-2 pb-2 dark:border-slate-700/80 dark:from-transparent dark:via-transparent dark:to-sky-950/35">
           {items.length === 0 ? (
             <p className="rounded-xl border border-dashed border-sky-200/80 bg-sky-50/50 px-3 py-4 text-center text-xs leading-relaxed text-slate-600 dark:border-sky-800/60 dark:bg-sky-950/25 dark:text-slate-400">
               Aggiungi una VPN con «Nuova».

@@ -27,7 +27,7 @@ Non serve installare Node.js, Rust o altri strumenti di sviluppo.
 
 ## Installazione
 
-1. Scarica il file installer (es. `HelpDesk Manager_0.3.0_x64-setup.exe`).
+1. Scarica il file installer (es. `HelpDesk Manager_0.4.0_x64-setup.exe`).
 2. Esegui il setup e segui il wizard (Avanti → Installa). Conferma il prompt **UAC** se richiesto.
 3. Al termine trovi **HelpDesk Manager** nel menu Start.
 

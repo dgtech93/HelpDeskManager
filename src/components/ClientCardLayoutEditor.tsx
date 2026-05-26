@@ -152,14 +152,6 @@ function coerceSpanInput(n: number): number {
   return Math.min(48, Math.max(1, rounded));
 }
 
-function coerceSectionHeightInput(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const n = Number.parseInt(trimmed, 10);
-  if (!Number.isFinite(n)) return null;
-  return Math.min(900, Math.max(190, Math.round(n)));
-}
-
 function RowTailDropZone({ rowId }: { rowId: string }) {
   const id = tailDropId(rowId);
   const { setNodeRef, isOver } = useDroppable({
@@ -250,32 +242,6 @@ function SortableCellCard(props: {
               );
             }}
             className="w-20 rounded-md border border-slate-200 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900"
-          />
-        </label>
-
-        <label className="flex flex-col gap-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-          Altezza sezione (px)
-          <input
-            type="number"
-            min={190}
-            max={900}
-            step={10}
-            placeholder="auto"
-            value={cell.heightPx ?? ""}
-            onChange={(e) => {
-              const heightPx = coerceSectionHeightInput(e.target.value);
-              patchRows(
-                rows.map((r, i) =>
-                  i === rowIndex
-                    ? {
-                        ...r,
-                        cells: r.cells.map((c) => (c.id === cell.id ? { ...c, heightPx } : c)),
-                      }
-                    : r,
-                ),
-              );
-            }}
-            className="w-24 rounded-md border border-slate-200 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900"
           />
         </label>
 
@@ -380,7 +346,7 @@ function SortableLayoutRow(props: {
       rows.map((r, i) => {
         if (i !== rowIndex) return r;
         if (heightMode === "pixels") {
-          const px = r.heightPx != null && Number.isFinite(r.heightPx) ? Math.max(80, Math.round(r.heightPx)) : 280;
+          const px = r.heightPx != null && Number.isFinite(r.heightPx) ? Math.max(190, Math.round(r.heightPx)) : 280;
           return { ...r, heightMode, heightPx: px };
         }
         return { ...r, heightMode, heightPx: null };
@@ -390,7 +356,7 @@ function SortableLayoutRow(props: {
 
   const onHeightPx = (raw: string) => {
     const n = Number.parseInt(raw, 10);
-    const px = Number.isFinite(n) ? Math.max(80, n) : 280;
+    const px = Number.isFinite(n) ? Math.max(190, n) : 280;
     patchRows(
       rows.map((r, i) => (i === rowIndex ? { ...r, heightMode: "pixels" as const, heightPx: px } : r)),
     );
@@ -435,7 +401,7 @@ function SortableLayoutRow(props: {
             px
             <input
               type="number"
-              min={80}
+              min={190}
               step={10}
               value={row.heightPx ?? 280}
               onChange={(e) => onHeightPx(e.target.value)}

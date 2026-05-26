@@ -146,15 +146,9 @@ export function ClientProfileCard({
 
         return (
 
-          <div key={id} className="flex min-w-0 shrink-0 flex-col gap-1.5">
+          <div key={id} className="flex h-full min-h-0 min-w-0 shrink-0 flex-col">
 
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-
-              Mappa sede
-
-            </span>
-
-            <LocationMapPreview query={loc} emptyPlaceholder />
+            <LocationMapPreview query={loc} emptyPlaceholder fillParent />
 
           </div>
 
@@ -164,13 +158,7 @@ export function ClientProfileCard({
 
         return (
 
-          <div key={id} className="flex min-w-0 shrink-0 flex-col gap-1.5">
-
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-
-              Rete VPN
-
-            </span>
+          <div key={id} className="flex h-full min-h-0 min-w-0 shrink-0 flex-col">
 
             {vpnSideCard}
 
@@ -188,7 +176,7 @@ export function ClientProfileCard({
 
       case "planning":
 
-        return planningPanel ? <div key={id}>{planningPanel}</div> : null;
+        return planningPanel ? <div key={id} className="flex h-full min-h-0 min-w-0 flex-col">{planningPanel}</div> : null;
 
       default:
 
@@ -206,18 +194,11 @@ export function ClientProfileCard({
 
   const noBodyPanels = !hasAnyVisibleLayoutCell;
 
-  const sectionHeightPx = (panelId: ClientCardPanelId, configured?: number | null): number | null => {
-    if (configured != null && Number.isFinite(configured)) return Math.max(190, Math.round(configured));
-    return panelId === "rdp" || panelId === "web" ? 248 : null;
-  };
-
-
-
   return (
 
-    <article className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-md ring-1 ring-slate-900/[0.04] dark:border-slate-700 dark:bg-slate-900 dark:shadow-xl dark:ring-white/[0.06]">
+    <article className="flex min-w-0 flex-col rounded-xl border border-slate-200/90 bg-white shadow-md ring-1 ring-slate-900/[0.04] dark:border-slate-700 dark:bg-slate-900 dark:shadow-xl dark:ring-white/[0.06]">
 
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden p-5 md:p-6">
+      <div className="flex min-w-0 flex-col gap-5 p-5 md:p-6">
 
         <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 
@@ -389,7 +370,7 @@ export function ClientProfileCard({
 
           className={cn(
 
-            "min-h-0 min-w-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto pr-0.5",
+            "min-w-0 gap-4 overflow-visible pr-0.5",
 
             "flex flex-col",
 
@@ -412,39 +393,47 @@ export function ClientProfileCard({
               if (visibleCells.length === 0) return null;
               const template = visibleCells.map((c) => `${Math.max(1, c.span)}fr`).join(" ");
               const isPixels = row.heightMode === "pixels" && row.heightPx != null;
-              const px = isPixels ? Math.max(80, Math.round(row.heightPx!)) : undefined;
+              const px = isPixels ? Math.max(190, Math.round(row.heightPx!)) : undefined;
+              const rowHasConnectionPanel = visibleCells.some((c) => c.panelId === "rdp" || c.panelId === "web");
+              const rowHeightPx = px ?? (row.heightMode === "auto" && rowHasConnectionPanel ? 248 : undefined);
+              const rowHasFixedHeight = rowHeightPx != null;
+              const rowManagesCellHeight = rowHasFixedHeight || row.heightMode === "stretch";
               return (
                 <div
                   key={row.id}
                   className={cn(
                     "min-w-0",
-                    row.heightMode === "stretch" && "flex min-h-0 flex-1 flex-col",
-                    row.heightMode === "auto" && "shrink-0",
-                    row.heightMode === "pixels" && "flex shrink-0 flex-col overflow-hidden",
+                    row.heightMode === "stretch" && !rowHasFixedHeight && "flex min-h-0 flex-1 flex-col",
+                    !rowHasFixedHeight && row.heightMode === "auto" && "shrink-0",
+                    rowHasFixedHeight && "flex shrink-0 flex-col",
                   )}
-                  style={isPixels ? { height: px, minHeight: px } : undefined}
+                  style={rowHasFixedHeight ? { height: rowHeightPx, minHeight: rowHeightPx } : undefined}
                 >
                   <div
                     className={cn(
                       "grid min-w-0 gap-4",
-                      row.heightMode === "stretch" && "min-h-0 flex-1",
-                      row.heightMode === "pixels" && "h-full min-h-0",
+                      row.heightMode === "stretch" && !rowHasFixedHeight && "min-h-0 flex-1",
+                      rowHasFixedHeight && "h-full min-h-0",
                     )}
                     style={{ gridTemplateColumns: template }}
                   >
                     {visibleCells.map((cell) => (
                       (() => {
-                        const heightPx = sectionHeightPx(cell.panelId, cell.heightPx);
+                        const hasInternalScroll =
+                          cell.panelId === "rdp" ||
+                          cell.panelId === "web" ||
+                          cell.panelId === "vpn" ||
+                          cell.panelId === "planning";
                         return (
                           <div
                             key={cell.id}
                             className={cn(
                               "min-w-0 min-h-0",
-                              heightPx != null && "overflow-hidden",
-                              heightPx == null && row.heightMode === "pixels" && "overflow-y-auto",
-                              heightPx == null && row.heightMode === "stretch" && "overflow-y-auto",
+                              rowManagesCellHeight && "h-full",
+                              hasInternalScroll && "overflow-visible",
+                              !hasInternalScroll && rowManagesCellHeight && "scrollbar-violet-subtle overflow-y-auto overflow-x-hidden",
+                              !hasInternalScroll && !rowManagesCellHeight && "overflow-visible",
                             )}
-                            style={heightPx != null ? { height: heightPx, minHeight: heightPx } : undefined}
                           >
                             {renderPanel(cell.panelId)}
                           </div>

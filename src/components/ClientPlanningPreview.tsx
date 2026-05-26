@@ -76,7 +76,7 @@ export function ClientPlanningPreview({
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-2 rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50/40 via-white to-slate-50/40 shadow-sm dark:border-violet-800/50 dark:from-violet-950/20 dark:via-slate-950 dark:to-slate-900">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50/40 via-white to-slate-50/40 shadow-[0_22px_55px_-22px_rgba(109,40,217,0.72)] ring-1 ring-violet-300/70 dark:border-violet-800/50 dark:from-violet-950/20 dark:via-slate-950 dark:to-slate-900 dark:shadow-[0_22px_58px_-20px_rgba(139,92,246,0.9)] dark:ring-violet-400/55">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-violet-200/60 px-3 py-2 dark:border-violet-800/40">
         <div className="flex items-center gap-2">
           <CalendarClock size={18} className="text-violet-600 dark:text-violet-400" aria-hidden />
@@ -110,7 +110,7 @@ export function ClientPlanningPreview({
         </div>
       </div>
 
-      <div className="scrollbar-violet-subtle min-h-0 max-h-[min(22rem,40vh)] overflow-y-auto px-3 pb-3">
+      <div className="scrollbar-violet-subtle min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {forClient.length === 0 ? (
           <p className="py-4 text-center text-xs text-slate-500 dark:text-slate-400">
             Nessuna attività collegata a questo cliente nei campi catalogo Cliente (combo / lista multipla).

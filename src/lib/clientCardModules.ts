@@ -156,13 +156,6 @@ function coerceSpan(v: unknown): number {
   return Math.min(48, Math.round(n));
 }
 
-function coerceCellHeightPx(v: unknown): number | null {
-  if (v == null || v === "") return null;
-  const n = typeof v === "number" ? v : Number.parseFloat(String(v));
-  if (!Number.isFinite(n)) return null;
-  return Math.min(900, Math.max(190, Math.round(n)));
-}
-
 function normalizeLayoutCell(raw: unknown): ClientCardLayoutCell | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -173,7 +166,6 @@ function normalizeLayoutCell(raw: unknown): ClientCardLayoutCell | null {
     id,
     panelId: panelRaw,
     span: coerceSpan(o.span),
-    heightPx: coerceCellHeightPx(o.heightPx ?? o.height_px),
   };
 }
 
@@ -190,7 +182,7 @@ function normalizeLayoutRow(raw: unknown): ClientCardLayoutRow | null {
 
   let heightPx: number | null = null;
   if (heightMode === "pixels") {
-    heightPx = Number.isFinite(parsedPx) ? Math.max(80, Math.round(parsedPx)) : 280;
+    heightPx = Number.isFinite(parsedPx) ? Math.max(190, Math.round(parsedPx)) : 280;
   }
 
   let cellsUnknown: unknown[] = [];
@@ -213,7 +205,7 @@ function sanitizeRowDimensions(rows: ClientCardLayoutRow[]): ClientCardLayoutRow
     let hp: number | null = null;
     if (hm === "pixels") {
       hp =
-        row.heightPx != null && Number.isFinite(row.heightPx) ? Math.max(80, Math.round(row.heightPx)) : 280;
+        row.heightPx != null && Number.isFinite(row.heightPx) ? Math.max(190, Math.round(row.heightPx)) : 280;
     }
     return {
       ...row,
@@ -222,7 +214,7 @@ function sanitizeRowDimensions(rows: ClientCardLayoutRow[]): ClientCardLayoutRow
       cells: row.cells.map((c) => ({
         ...c,
         span: coerceSpan(c.span),
-        heightPx: coerceCellHeightPx(c.heightPx),
+        heightPx: null,
       })),
     };
   });

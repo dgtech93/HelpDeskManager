@@ -2351,8 +2351,9 @@ export function SettingsPage() {
                 moduli sulla stessa riga restano affiancati (larghezze relative con «span»). I moduli <strong>disattivati</strong>{" "}
                 non compaiono nella griglia sotto così il layout riflette solo ciò che è visibile nella pagina. Ordine delle
                 righe con la <strong>presa verticale</strong>, riordino in riga con la <strong>presa sul modulo</strong>. Per
-                ogni riga puoi impostare l&apos;altezza (contenuto, riempimento o pixel fissi). RDP e Web restano due pannelli
-                distinti anche se condividono i dati di connessione.
+                ogni riga puoi impostare un&apos;altezza unica (contenuto, riempimento o pixel fissi): tutte le sezioni della
+                stessa riga avranno quella altezza e scorreranno internamente se il contenuto non ci sta. RDP e Web restano due
+                pannelli distinti anche se condividono i dati di connessione.
               </p>
               {!api.isTauriRuntime() ? (
                 <p className="text-sm text-amber-800 dark:text-amber-200">
