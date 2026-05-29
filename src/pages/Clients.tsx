@@ -405,6 +405,7 @@ export function ClientsPage() {
             <VpnForm
               key={editVpn?.id ?? `new-vpn-${selectedId}`}
               clients={clients}
+              allVpns={allVpns}
               initial={editVpn}
               defaultClientId={editVpn ? null : selectedId}
               onCancel={() => setShowVpnForm(false)}

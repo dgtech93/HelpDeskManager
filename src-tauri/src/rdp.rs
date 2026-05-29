@@ -15,6 +15,7 @@ use std::thread;
 use std::time::Duration;
 
 /// Salva le credenziali in Credenziali di Windows per `TERMSRV/<host>` così MSTSC le usa (NLA).
+/// Avvio non bloccante: `mstsc` parte subito; `cmdkey` di solito termina prima della connessione NLA.
 /// Le rimuove dopo 120 s (stesso schema del ramo file .rdp).
 #[cfg(target_os = "windows")]
 fn seed_cmdkey_termsrv(
@@ -38,21 +39,31 @@ fn seed_cmdkey_termsrv(
         (_, Some(u)) if !u.trim().is_empty() => u.trim().to_string(),
         _ => return,
     };
-    let _ = Command::new("cmdkey.exe")
+    #[cfg(windows)]
+    use std::os::windows::process::CommandExt;
+
+    let mut add_cmd = Command::new("cmdkey.exe");
+    add_cmd
         .arg(format!("/generic:{generic}"))
         .arg(format!("/user:{cmdkey_user}"))
         .arg(format!("/pass:{pw}"))
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    add_cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    let _ = add_cmd.spawn();
+
     let generic_del = generic.clone();
     thread::spawn(move || {
         thread::sleep(Duration::from_secs(120));
-        let _ = Command::new("cmdkey.exe")
+        let mut del_cmd = Command::new("cmdkey.exe");
+        del_cmd
             .arg(format!("/delete:{generic_del}"))
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
+            .stderr(Stdio::null());
+        #[cfg(windows)]
+        del_cmd.creation_flags(0x0800_0000);
+        let _ = del_cmd.status();
     });
 }
 

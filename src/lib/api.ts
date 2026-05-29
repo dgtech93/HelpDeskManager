@@ -352,6 +352,10 @@ export async function copyVpnField(id: string, field: "server" | "username" | "p
   return invoke("copy_vpn_field", { id, field });
 }
 
+export async function revealVpnPassword(id: string): Promise<string | null> {
+  return invoke<string | null>("reveal_vpn_password", { id });
+}
+
 export async function getWebConnections(): Promise<WebAccess[]> {
   return invoke("get_web_connections");
 }

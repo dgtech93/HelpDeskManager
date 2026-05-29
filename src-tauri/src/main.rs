@@ -1347,7 +1347,13 @@ fn launch_rdp(state: tauri::State<AppState>, id: String) -> Result<(), String> {
         };
     let pw_slice = pw_plain.as_deref();
     rdp::launch_rdp_connection(&rdp, pw_slice)?;
-    let _ = db::insert_audit(&conn, "launch_rdp", "rdp", Some(&id));
+    let id_audit = id.clone();
+    let db_path = state.db_path.clone();
+    std::thread::spawn(move || {
+        if let Ok(conn) = db::open_db(&db_path) {
+            let _ = db::insert_audit(&conn, "launch_rdp", "rdp", Some(&id_audit));
+        }
+    });
     Ok(())
 }
 
@@ -1452,6 +1458,24 @@ fn create_vpn(
         None
     };
     db::create_vpn(&conn, &input, enc_pw).map_err(db_err)
+}
+
+#[tauri::command]
+fn reveal_vpn_password(
+    state: tauri::State<AppState>,
+    id: String,
+) -> Result<Option<String>, String> {
+    let conn = open(&state)?;
+    let vpn = db::get_vpn(&conn, &id)
+        .map_err(db_err)?
+        .ok_or_else(|| err_msg(AppError::NotFound, Some("Connessione VPN non trovata")))?;
+    let Some(ref blob) = vpn.password_encrypted else {
+        return Ok(None);
+    };
+    let key = vault_unlocked_key(&state)?;
+    let plain = decrypt_aes256_gcm(key.as_ref(), blob)
+        .map_err(|_| err_msg(AppError::CryptoError, Some("password non decifrabile")))?;
+    Ok(Some(plain))
 }
 
 #[tauri::command]
@@ -2378,6 +2402,7 @@ fn main() {
             launch_vpn,
             list_windows_vpn_profiles,
             copy_vpn_field,
+            reveal_vpn_password,
             get_web_connections,
             get_web_by_client,
             get_web_access,

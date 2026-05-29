@@ -8,7 +8,9 @@ import { toast } from "sonner";
 import type { Client, VpnConnection } from "@/types";
 import * as api from "@/lib/api";
 import { formatErr, isTauriRuntime } from "@/lib/api";
+import { listVpnTemplatesFromOtherClients, vpnTemplateFieldValues } from "@/lib/vpnTemplates";
 import { VaultUnlockBanner } from "@/components/VaultUnlockBanner";
+import { useAppStore } from "@/store/appStore";
 
 export const VPN_TYPES = [
   "Windows VPN",
@@ -69,6 +71,8 @@ export type VpnFormValues = z.infer<typeof schema>;
 
 type Props = {
   clients: Client[];
+  /** Tutte le VPN del gestionale (per copiare configurazioni da altri clienti). */
+  allVpns?: VpnConnection[];
   initial?: VpnConnection | null;
   /** Se si crea una nuova VPN (senza `initial`), pre-seleziona questo cliente. */
   defaultClientId?: string | null;
@@ -76,13 +80,16 @@ type Props = {
   onCancel: () => void;
 };
 
-export function VpnForm({ clients, initial, defaultClientId, onSubmit, onCancel }: Props) {
+export function VpnForm({ clients, allVpns = [], initial, defaultClientId, onSubmit, onCancel }: Props) {
+  const vaultUnlocked = useAppStore((s) => s.vaultUnlocked);
   const pwdSet = Boolean(initial?.passwordEncrypted);
   const [removePwd, setRemovePwd] = React.useState(false);
   const [winProfiles, setWinProfiles] = React.useState<string[]>([]);
   /** True dopo il primo caricamento esplicito (pulsante), mai all’apertura modale. */
   const [winProfilesFetched, setWinProfilesFetched] = React.useState(false);
   const [loadingWin, setLoadingWin] = React.useState(false);
+  const [templateSourceId, setTemplateSourceId] = React.useState("");
+  const [loadingTemplate, setLoadingTemplate] = React.useState(false);
 
   const preferredNewClientId =
     (defaultClientId?.trim() && clients.some((c) => c.id === defaultClientId.trim())
@@ -103,8 +110,57 @@ export function VpnForm({ clients, initial, defaultClientId, onSubmit, onCancel 
     },
   });
 
+  const clientIdWatch = form.watch("clientId");
   const typeWatch = form.watch("type");
+  const configPathWatch = form.watch("configPath");
   const isWindowsVpn = typeWatch === VPN_TYPE_WINDOWS;
+
+  const templateOptions = React.useMemo(
+    () =>
+      initial
+        ? []
+        : listVpnTemplatesFromOtherClients(allVpns, clients, clientIdWatch || preferredNewClientId),
+    [allVpns, clients, clientIdWatch, initial, preferredNewClientId],
+  );
+
+  React.useEffect(() => {
+    setTemplateSourceId("");
+  }, [clientIdWatch, initial]);
+
+  const applyVpnTemplate = React.useCallback(
+    async (sourceId: string) => {
+      const opt = templateOptions.find((o) => o.sourceId === sourceId);
+      if (!opt) return;
+      setLoadingTemplate(true);
+      try {
+        const fields = vpnTemplateFieldValues(opt.vpn);
+        form.setValue("name", fields.name, { shouldValidate: true });
+        form.setValue("type", fields.type, { shouldValidate: true });
+        form.setValue("server", fields.server, { shouldValidate: true });
+        form.setValue("username", fields.username, { shouldValidate: true });
+        form.setValue("configPath", fields.configPath, { shouldValidate: true });
+        form.setValue("notes", fields.notes, { shouldValidate: true });
+        if (opt.vpn.passwordEncrypted) {
+          if (!vaultUnlocked) {
+            toast.message("Sblocca il vault per copiare anche la password salvata.");
+            form.setValue("passwordPlain", "");
+          } else {
+            const pw = await api.revealVpnPassword(opt.vpn.id);
+            form.setValue("passwordPlain", pw ?? "");
+          }
+        } else {
+          form.setValue("passwordPlain", "");
+        }
+        toast.success("Configurazione VPN copiata da un altro cliente.");
+      } catch (e) {
+        toast.error(formatErr(e));
+        setTemplateSourceId("");
+      } finally {
+        setLoadingTemplate(false);
+      }
+    },
+    [form, templateOptions, vaultUnlocked],
+  );
 
   const loadWinProfiles = React.useCallback(async () => {
     if (!isTauriRuntime()) {
@@ -129,16 +185,18 @@ export function VpnForm({ clients, initial, defaultClientId, onSubmit, onCancel 
   }, []);
 
   const initialWinPath = initial?.configPath?.trim() ?? "";
+  const formWinPath = configPathWatch?.trim() ?? "";
+  const savedWinPath = initial ? initialWinPath : formWinPath;
 
   /** Modifica senza aver ancora caricato l’elenco: mostra il profilo salvato senza chiamare PowerShell. */
   const showSavedPendingOption =
-    Boolean(initialWinPath) && !winProfilesFetched && isWindowsVpn;
+    Boolean(savedWinPath) && !winProfilesFetched && isWindowsVpn;
 
   /** Dopo refresh: profilo salvato non trovato nel sistema. */
   const showOrphanOption =
-    Boolean(initialWinPath) &&
+    Boolean(savedWinPath) &&
     winProfilesFetched &&
-    !winProfiles.includes(initialWinPath) &&
+    !winProfiles.includes(savedWinPath) &&
     isWindowsVpn;
 
   const pickVpnConfigFile = React.useCallback(async () => {
@@ -170,6 +228,34 @@ export function VpnForm({ clients, initial, defaultClientId, onSubmit, onCancel 
       })}
     >
       <VaultUnlockBanner />
+      {!initial && templateOptions.length > 0 ? (
+        <div className="rounded-xl border border-sky-200/90 bg-sky-50/70 p-3 dark:border-sky-500/35 dark:bg-sky-950/30">
+          <label className="text-xs font-medium text-sky-950 dark:text-sky-100">
+            Copia configurazione da altro cliente
+          </label>
+          <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+            Stesso server, credenziali e profilo usati su un altro cliente. Il cliente attuale resta quello selezionato
+            sotto.
+          </p>
+          <select
+            value={templateSourceId}
+            disabled={loadingTemplate}
+            onChange={(e) => {
+              const id = e.target.value;
+              setTemplateSourceId(id);
+              if (id) void applyVpnTemplate(id);
+            }}
+            className="mt-2 w-full rounded-lg border border-sky-200/90 bg-white px-3 py-2 text-sm disabled:opacity-60 dark:border-sky-700 dark:bg-slate-900"
+          >
+            <option value="">— Inserimento manuale —</option>
+            {templateOptions.map((o) => (
+              <option key={o.sourceId} value={o.sourceId}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-2">
         <div className="md:col-span-2">
           <label className="text-xs font-medium">Cliente</label>
@@ -256,7 +342,7 @@ export function VpnForm({ clients, initial, defaultClientId, onSubmit, onCancel 
                   {...form.register("configPath")}
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
                 >
-                  {!initialWinPath || winProfilesFetched ? (
+                  {!savedWinPath || winProfilesFetched ? (
                     <option value="">
                       {winProfilesFetched
                         ? "— Seleziona connessione —"
@@ -264,11 +350,14 @@ export function VpnForm({ clients, initial, defaultClientId, onSubmit, onCancel 
                     </option>
                   ) : null}
                   {showSavedPendingOption ? (
-                    <option value={initialWinPath}>{initialWinPath} (salvata nel gestionale)</option>
+                    <option value={savedWinPath}>
+                      {savedWinPath}
+                      {initial ? " (salvata nel gestionale)" : " (da configurazione copiata)"}
+                    </option>
                   ) : null}
                   {showOrphanOption ? (
-                    <option value={initialWinPath}>
-                      {initialWinPath} (non più rilevata in Windows)
+                    <option value={savedWinPath}>
+                      {savedWinPath} (non più rilevata in Windows)
                     </option>
                   ) : null}
                   {winProfiles.map((n) => (
